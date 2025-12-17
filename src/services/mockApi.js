@@ -205,7 +205,8 @@ export const mockApi = {
     return newTask;
   },
 
-  async updateTaskStatus(taskId, status, userId = null) {
+
+  async updateTaskStatus(taskId, status, userId = null, reportData = null) {
     await delay(500);
     const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
     const task = tasks.find(t => t.id === taskId);
@@ -220,7 +221,12 @@ export const mockApi = {
       task.assignedTo = userId;
     }
     
-    if (status === 'REVIEW') {
+    if (status === 'REVIEW' && reportData) {
+      task.report = {
+        description: reportData.description,
+        imageUrl: reportData.imageUrl,
+        submittedAt: new Date().toISOString()
+      };
       task.completedAt = new Date().toISOString();
     }
     
@@ -250,3 +256,4 @@ export const mockApi = {
     return userWithoutPassword;
   }
 };
+
