@@ -12,19 +12,15 @@ export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const { user } = useAuth();
 
-  // Загружаем задачи при монтировании и изменении пользователя
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        // Передаем ID и роль, чтобы API вернул правильный список
         const data = await mockApi.getTasks(user?.id, user?.role);
         setTasks(data || []);
       } catch (error) {
-        console.error("Ошибка загрузки задач:", error);
         setTasks([]);
       }
     };
-
     fetchTasks();
   }, [user]);
 
@@ -34,14 +30,12 @@ export const TaskProvider = ({ children }) => {
     return newTask;
   };
 
-  // Метод для обновления статуса (взять, завершить, подтвердить и т.д.)
   const updateTaskStatus = async (taskId, status, reportData = null) => {
     const updatedTask = await mockApi.updateTaskStatus(taskId, status, user?.id, reportData);
     setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
     return updatedTask;
   };
 
-  // Метод отказа от задания со штрафом
   const abandonTask = async (taskId) => {
     const { task } = await mockApi.abandonTask(taskId, user?.id);
     setTasks(prev => prev.map(t => t.id === taskId ? task : t));
