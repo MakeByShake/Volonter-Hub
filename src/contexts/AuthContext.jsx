@@ -17,41 +17,28 @@ export const AuthProvider = ({ children }) => {
       try {
         setUser(JSON.parse(storedUser));
       } catch (e) {
-        console.error("Ошибка чтения пользователя", e);
+        console.error(e);
       }
     }
     setLoading(false);
   }, []);
 
   const login = async (loginData, password) => {
-    try {
-      // Используем метод из API вместо прямого поиска по массиву
-      const userData = await mockApi.login(loginData, password);
-      
-      // Обеспечиваем наличие роли
-      const userWithRole = { 
-        ...userData, 
-        role: userData.role || (userData.name === 'Администратор' ? 'ADMIN' : 'USER') 
-      };
-      
-      setUser(userWithRole);
-      localStorage.setItem('currentUser', JSON.stringify(userWithRole));
-      return userWithRole;
-    } catch (error) {
-      // Пробрасываем ошибку дальше, чтобы LoginForm мог её показать
-      throw error;
-    }
+    const userData = await mockApi.login(loginData, password);
+    const userWithRole = { 
+      ...userData, 
+      role: userData.role || (userData.name === 'Администратор' ? 'ADMIN' : 'USER') 
+    };
+    setUser(userWithRole);
+    localStorage.setItem('currentUser', JSON.stringify(userWithRole));
+    return userWithRole;
   };
 
   const register = async (userData) => {
-    try {
-      const newUser = await mockApi.register(userData);
-      setUser(newUser);
-      localStorage.setItem('currentUser', JSON.stringify(newUser));
-      return newUser;
-    } catch (error) {
-      throw error;
-    }
+    const newUser = await mockApi.register(userData);
+    setUser(newUser);
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
+    return newUser;
   };
 
   const logout = () => {
