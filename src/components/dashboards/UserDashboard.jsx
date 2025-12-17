@@ -124,15 +124,16 @@ export const UserDashboard = () => {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-bold text-gray-800">Панель пользователя</h1>
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-100 px-4 py-2 rounded-lg">
-                <span className="text-sm text-gray-600">Мои баллы: </span>
-                <span className="font-bold text-blue-600">{user.points || 0}</span>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">Панель пользователя</h1>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="bg-blue-100 px-2 sm:px-4 py-1 sm:py-2 rounded-lg">
+                <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">Мои баллы: </span>
+                <span className="text-xs sm:text-sm text-gray-600 sm:hidden">Баллы: </span>
+                <span className="font-bold text-blue-600 text-sm sm:text-base">{user.points || 0}</span>
               </div>
               <button
                 onClick={logout}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                className="px-2 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm sm:text-base"
               >
                 Выйти
               </button>
