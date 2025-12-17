@@ -36,7 +36,6 @@ const seedData = () => {
     }
   ];
 
-  // Исправлены статусы на lowercase, чтобы соответствовать UserDashboard.jsx
   const defaultTasks = [
     {
       id: '1',
@@ -44,7 +43,7 @@ const seedData = () => {
       description: 'Нужна помощь в уборке квартиры пожилой женщине. Требуется помощь с генеральной уборкой.',
       city: 'Москва',
       imageUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400',
-      status: 'open', 
+      status: 'open',
       createdBy: '3',
       assignedTo: null,
       createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -150,17 +149,9 @@ export const mockApi = {
   async getTasks(userId, role) {
     await delay(500);
     const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
-    
-    if (role === 'ADMIN') {
-      return tasks;
-    }
-    
-    // Для обычного юзера возвращаем всё, фильтрация будет на фронте или здесь
-    // Возвращаем все задачи, чтобы лента работала корректно
     return tasks;
   },
 
-  // Новый метод для админки
   async getUsers() {
     await delay(300);
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
@@ -174,7 +165,6 @@ export const mockApi = {
     
     const creator = users.find(u => u.id === taskData.createdBy);
     
-    // Списание баллов (если нужно)
     if (creator) {
        const pointsToDeduct = parseInt(taskData.points) || 0;
        if (creator.points >= pointsToDeduct) {
@@ -186,7 +176,7 @@ export const mockApi = {
     const newTask = {
       id: String(Date.now()),
       ...taskData,
-      status: 'pending_approval', // Статус для модерации
+      status: 'pending_approval',
       assignedTo: null,
       createdAt: new Date().toISOString()
     };
@@ -211,7 +201,6 @@ export const mockApi = {
     }
     
     if (status === 'completed' && userId) {
-        // Начисление баллов исполнителю
         const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
         const user = users.find(u => u.id === userId);
         if (user) {
