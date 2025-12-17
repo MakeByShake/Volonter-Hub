@@ -1,9 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTasks } from '../contexts/TaskContext';
-import { MapPin, Clock, Award } from 'lucide-react'; // Рекомендую использовать иконки (нужно установить lucide-react)
-
-// Если lucide-react не установлен, можно оставить SVG из старого кода, но я покажу структуру для нового дизайна
+import { MapPin, Clock, Award } from 'lucide-react'; 
 
 const statusLabels = {
   PENDING: { label: 'На проверке', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -19,7 +17,7 @@ export const TaskCard = ({ task }) => {
   const { updateTaskStatus } = useTasks();
 
   const handleTakeTask = async () => await updateTaskStatus(task.id, 'IN_PROGRESS');
-  constXY handleCompleteTask = async () => await updateTaskStatus(task.id, 'REVIEW');
+  const handleCompleteTask = async () => await updateTaskStatus(task.id, 'REVIEW');
   const handleApprove = async () => await updateTaskStatus(task.id, 'OPEN');
   const handleReject = async () => await updateTaskStatus(task.id, 'REJECTED');
   const handleConfirmCompletion = async () => await updateTaskStatus(task.id, 'DONE');
