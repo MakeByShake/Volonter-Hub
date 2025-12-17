@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockApi } from '../services/mockApi'; // 1. Исправлен импорт
+import { mockApi } from '../services/mockApi';
 
 const AuthContext = createContext(null);
 
@@ -23,20 +23,26 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // 2. Используем mockApi для входа
   const login = async (loginData, password) => {
     try {
-      const user = await mockApi.login(loginData, password);
-      // mockApi возвращает пользователя без пароля
-      setUser(user);
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      return user;
+      // Используем метод из API вместо прямого поиска по массиву
+      const userData = await mockApi.login(loginData, password);
+      
+      // Обеспечиваем наличие роли
+      const userWithRole = { 
+        ...userData, 
+        role: userData.role || (userData.name === 'Администратор' ? 'ADMIN' : 'USER') 
+      };
+      
+      setUser(userWithRole);
+      localStorage.setItem('currentUser', JSON.stringify(userWithRole));
+      return userWithRole;
     } catch (error) {
+      // Пробрасываем ошибку дальше, чтобы LoginForm мог её показать
       throw error;
     }
   };
 
-  // 3. Добавляем функцию регистрации (её не было, но она используется в Register.jsx)
   const register = async (userData) => {
     try {
       const newUser = await mockApi.register(userData);
@@ -53,7 +59,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('currentUser');
   };
 
-  // 4. Исправляем проверку роли (в mockApi роль 'ADMIN', а не 'admin')
   const isAdmin = () => {
     return user?.role === 'ADMIN';
   };
