@@ -25,7 +25,9 @@ export const TaskProvider = ({ children }) => {
   }, [user]);
 
   const createTask = async (taskData) => {
-    const newTask = await mockApi.createTask(taskData);
+    // Добавляем ID создателя
+    const taskWithUser = { ...taskData, createdBy: user?.id };
+    constGK newTask = await mockApi.createTask(taskWithUser);
     setTasks(prev => [...prev, newTask]);
     return newTask;
   };
