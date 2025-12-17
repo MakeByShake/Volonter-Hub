@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 
-function UserDashboard({ user, tasks, onTake, onComplete, onRefuse }) {
+// Добавлено значение по умолчанию для tasks = []
+function UserDashboard({ user, tasks = [], onTake, onComplete, onRefuse }) {
   const [filter, setFilter] = useState('all');
 
-  const myTasks = tasks.filter(t => t.volunteerId === user.id);
+  // Исправлено: в mockApi поле называется assignedTo, а не volunteerId
+  const myTasks = tasks.filter(t => t.assignedTo === user.id);
   const availableTasks = tasks.filter(t => t.status === 'open');
 
   return (
     <div>
       <h2>Кабинет Волонтера</h2>
       <div className="mb-4 p-3 bg-light rounded">
-        <h4>Мой рейтинг: <span className="badge bg-primary">{user.rating}</span></h4>
+        <h4>Мой рейтинг: <span className="badge bg-primary">{user.rating || user.points || 0}</span></h4>
       </div>
 
       <div className="btn-group mb-4">
