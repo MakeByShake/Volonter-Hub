@@ -49,10 +49,8 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
- // Найдите функцию updateTaskStatus и замените её на эту:
   const updateTaskStatus = async (taskId, status, reportData = null) => {
     try {
-      // Передаем reportData в mockApi
       await mockApi.updateTaskStatus(taskId, status, user.id, reportData);
       await fetchTasks();
       if (user.role === 'USER') {
@@ -73,4 +71,5 @@ export const TaskProvider = ({ children }) => {
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 };
+
 
