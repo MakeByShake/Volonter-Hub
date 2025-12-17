@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockApi } from '../services/mockApi'; // Импортируем API
+import { mockApi } from '../services/mockApi';
 import { useAuth } from './AuthContext';
 
 const TaskContext = createContext();
@@ -12,38 +12,39 @@ export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const { user } = useAuth();
 
-  // Загрузка задач при старте или смене пользователя
+  // Загружаем задачи при монтировании и изменении пользователя
   useEffect(() => {
-    const loadTasks = async () => {
+    const fetchTasks = async () => {
       try {
-        // mockApi.getTasks возвращает задачи в зависимости от роли
-        const fetchedTasks = await mockApi.getTasks(user?.id, user?.role || 'USER');
-        setTasks(fetchedTasks);
+        // Передаем ID и роль, чтобы API вернул правильный список
+        const data = await mockApi.getTasks(user?.id, user?.role);
+        setTasks(data || []);
       } catch (error) {
         console.error("Ошибка загрузки задач:", error);
+        setTasks([]);
       }
     };
-    loadTasks();
-  }, [user]); 
 
-  // Метод создания задачи
+    fetchTasks();
+  }, [user]);
+
   const createTask = async (taskData) => {
     const newTask = await mockApi.createTask(taskData);
     setTasks(prev => [...prev, newTask]);
     return newTask;
   };
 
-  // Универсальный метод обновления статуса (используется в TaskCard)
+  // Метод для обновления статуса (взять, завершить, подтвердить и т.д.)
   const updateTaskStatus = async (taskId, status, reportData = null) => {
     const updatedTask = await mockApi.updateTaskStatus(taskId, status, user?.id, reportData);
     setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
     return updatedTask;
   };
 
-  // Метод отказа от задачи (используется в TaskCard)
+  // Метод отказа от задания со штрафом
   const abandonTask = async (taskId) => {
-    const { task: updatedTask } = await mockApi.abandonTask(taskId, user?.id);
-    setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+    const { task } = await mockApi.abandonTask(taskId, user?.id);
+    setTasks(prev => prev.map(t => t.id === taskId ? task : t));
   };
 
   const value = {
