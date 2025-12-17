@@ -1,74 +1,95 @@
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useTasks } from '../../contexts/TaskContext';
-import { TaskCard } from '../TaskCard';
 
-export const AdminDashboard = () => {
-  const { logout } = useAuth();
-  const { tasks, loading } = useTasks();
-
-  const pendingTasks = tasks.filter(t => t.status === 'PENDING');
-  const reviewTasks = tasks.filter(t => t.status === 'REVIEW');
-  const allTasks = tasks;
+function AdminDashboard({ tasks, users, onApprove, onReject }) {
+  const pendingTasks = tasks.filter(t => t.status === 'pending_approval');
+  
+  const getVolunteerName = (id) => {
+    const user = users.find(u => u.id === id);
+    return user ? user.name : 'Unknown';
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-bold text-gray-800">Панель администратора</h1>
-            <button
-              onClick={logout}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-            >
-              Выйти
-            </button>
+    <div>
+      <h2 className="mb-4">Панель Администратора</h2>
+      
+      <div className="row">
+        <div className="col-md-12">
+          <div className="card shadow-sm">
+            <div className="card-header bg-warning text-dark">
+              <h5 className="mb-0">Задания на проверке</h5>
+            </div>
+            <div className="card-body">
+              {pendingTasks.length === 0 ? (
+                <p className="text-muted">Нет заданий, ожидающих проверки</p>
+              ) : (
+                <div className="list-group">
+                  {pendingTasks.map(task => (
+                    <div key={task.id} className="list-group-item d-flex justify-content-between align-items-center">
+                      <div>
+                        <h5 className="mb-1">{task.title}</h5>
+                        <p className="mb-1">{task.description}</p>
+                        <small className="text-muted">
+                          Выполнил: <strong>{getVolunteerName(task.volunteerId)}</strong>
+                        </small>
+                      </div>
+                      <div className="d-flex gap-2">
+                        <button 
+                          className="btn btn-success"
+                          onClick={() => onApprove(task.id, task.volunteerId)}
+                        >
+                          Подтвердить
+                        </button>
+                        <button 
+                          className="btn btn-danger"
+                          onClick={() => onReject(task.id)}
+                        >
+                          Отклонить
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {pendingTasks.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Заявки на проверке ({pendingTasks.length})
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pendingTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
+      <div className="row mt-5">
+        <div className="col-md-12">
+          <h4>Все задачи в системе</h4>
+          <table className="table table-striped mt-3">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Статус</th>
+                <th>Волонтер</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map(task => (
+                <tr key={task.id}>
+                  <td>{task.id}</td>
+                  <td>{task.title}</td>
+                  <td>
+                    <span className={`badge bg-${
+                      task.status === 'completed' ? 'success' : 
+                      task.status === 'open' ? 'secondary' : 
+                      task.status === 'pending_approval' ? 'warning' : 'primary'
+                    }`}>
+                      {task.status}
+                    </span>
+                  </td>
+                  <td>{task.volunteerId ? getVolunteerName(task.volunteerId) : '-'}</td>
+                </tr>
               ))}
-            </div>
-          </div>
-        )}
-
-        {reviewTasks.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              На проверке выполнения ({reviewTasks.length})
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reviewTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Все задания</h2>
-          {loading ? (
-            <div className="text-center py-12 text-gray-500">Загрузка...</div>
-          ) : allTasks.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">Нет заданий</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
-};
+}
+
+export default AdminDashboard;
