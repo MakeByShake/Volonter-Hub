@@ -2,8 +2,8 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TaskProvider } from './contexts/TaskContext';
-import Login from './components/LoginForm'; // Исправлен путь!
-import { Register } from './pages/Register'; // Исправлен путь!
+import Login from './components/LoginForm';
+import { Register } from './pages/Register';
 import AdminDashboard from './components/dashboards/AdminDashboard';
 import UserDashboard from './components/dashboards/UserDashboard';
 import Navbar from './components/Navbar';
@@ -34,7 +34,6 @@ function AppContent() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
-      {/* Единый дашборд. Если админ - админка, иначе - обычный кабинет */}
       <Route path="/dashboard" element={
         <PrivateRoute>
           {isAdmin() ? <AdminDashboard /> : <UserDashboard />}
@@ -47,7 +46,12 @@ function AppContent() {
         </PrivateRoute>
       } />
 
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      {/* ИСПРАВЛЕНИЕ ЗДЕСЬ: */}
+      {/* Если юзер есть -> в Dashboard, если нет -> в Login */}
+      <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
+      
+      {/* Если введен несуществующий путь -> тоже на главную (которая сама решит куда дальше) */}
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }
