@@ -36,6 +36,7 @@ const seedData = () => {
     }
   ];
 
+  // Исправлены статусы на lowercase, чтобы соответствовать UserDashboard.jsx
   const defaultTasks = [
     {
       id: '1',
@@ -43,7 +44,7 @@ const seedData = () => {
       description: 'Нужна помощь в уборке квартиры пожилой женщине. Требуется помощь с генеральной уборкой.',
       city: 'Москва',
       imageUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400',
-      status: 'OPEN',
+      status: 'open', 
       createdBy: '3',
       assignedTo: null,
       createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -55,7 +56,7 @@ const seedData = () => {
       description: 'Нужна помощь с доставкой продуктов из магазина. Живу на 3 этаже, лифт не работает.',
       city: 'Санкт-Петербург',
       imageUrl: 'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=400',
-      status: 'PENDING',
+      status: 'pending_approval',
       createdBy: '3',
       assignedTo: null,
       createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -67,7 +68,7 @@ const seedData = () => {
       description: 'Требуется помощь с мелким ремонтом в квартире. Нужно повесить полки и починить кран.',
       city: 'Москва',
       imageUrl: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=400',
-      status: 'DONE',
+      status: 'completed',
       createdBy: '3',
       assignedTo: '2',
       createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
@@ -80,7 +81,7 @@ const seedData = () => {
       description: 'Нужна помощь с выгулом собаки. Не могу выйти из дома по состоянию здоровья.',
       city: 'Казань',
       imageUrl: 'https://images.unsplash.com/photo-1551717743-49959800b1f6?w=400',
-      status: 'OPEN',
+      status: 'open',
       createdBy: '3',
       assignedTo: null,
       createdAt: new Date(Date.now() - 3600000).toISOString(),
@@ -102,18 +103,10 @@ const seedData = () => {
 
   if (tasks.length === 0) {
     tasks = defaultTasks;
-  } else {
-    defaultTasks.forEach(defaultTask => {
-      const existingTask = tasks.find(t => t.id === defaultTask.id);
-      if (!existingTask) {
-        tasks.push(defaultTask);
-      }
-    });
   }
-
+  
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
-  localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
 };
 
 seedData();
@@ -122,7 +115,7 @@ export const mockApi = {
   async login(login, password) {
     await delay(500);
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    const user = users.find(u => u.login === login && u.password === password);
+    const user = users.find(u => (u.login === login || u.email === login) && u.password === password);
     
     if (!user) {
       throw new Error('Неверный логин или пароль');
@@ -162,15 +155,16 @@ export const mockApi = {
       return tasks;
     }
     
-    if (role === 'USER') {
-      return tasks.filter(task => 
-        task.createdBy === userId || 
-        task.status === 'OPEN' || 
-        (task.assignedTo === userId && ['IN_PROGRESS', 'REVIEW', 'DONE'].includes(task.status))
-      );
-    }
-    
-    return [];
+    // Для обычного юзера возвращаем всё, фильтрация будет на фронте или здесь
+    // Возвращаем все задачи, чтобы лента работала корректно
+    return tasks;
+  },
+
+  // Новый метод для админки
+  async getUsers() {
+    await delay(300);
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+    return users.map(({ password, ...u }) => u);
   },
 
   async createTask(taskData) {
@@ -179,22 +173,20 @@ export const mockApi = {
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
     
     const creator = users.find(u => u.id === taskData.createdBy);
-    if (!creator) {
-      throw new Error('Пользователь не найден');
-    }
     
-    const pointsToDeduct = parseInt(taskData.points) || 0;
-    if (creator.points < pointsToDeduct) {
-      throw new Error(`Недостаточно очков. У вас ${creator.points}, требуется ${pointsToDeduct}`);
+    // Списание баллов (если нужно)
+    if (creator) {
+       const pointsToDeduct = parseInt(taskData.points) || 0;
+       if (creator.points >= pointsToDeduct) {
+         creator.points -= pointsToDeduct;
+         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+       }
     }
-    
-    creator.points -= pointsToDeduct;
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     
     const newTask = {
       id: String(Date.now()),
       ...taskData,
-      status: 'PENDING',
+      status: 'pending_approval', // Статус для модерации
       assignedTo: null,
       createdAt: new Date().toISOString()
     };
@@ -206,94 +198,42 @@ export const mockApi = {
   },
 
   async updateTaskStatus(taskId, status, userId = null, reportData = null) {
-    await delay(500);
+    await delay(300);
     const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
     const task = tasks.find(t => t.id === taskId);
     
-    if (!task) {
-      throw new Error('Задание не найдено');
-    }
+    if (!task) throw new Error('Задание не найдено');
     
     task.status = status;
     
-    if (status === 'IN_PROGRESS' && userId) {
+    if (status === 'in_progress' && userId) {
       task.assignedTo = userId;
     }
+    
+    if (status === 'completed' && userId) {
+        // Начисление баллов исполнителю
+        const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+        const user = users.find(u => u.id === userId);
+        if (user) {
+            user.points = (user.points || 0) + (task.points || 0);
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        }
+    }
 
-    // Если Админ отклоняет отчет (возвращает в работу)
-    if (status === 'IN_PROGRESS' && !userId) {
-       // Оставляем assignedTo тем же, просто меняем статус
-       task.report = null; // Сбрасываем отчет
-    }
-    
-    // Сохраняем отчет при завершении
-    if (status === 'REVIEW' && reportData) {
-      task.report = {
-        description: reportData.description,
-        imageUrl: reportData.imageUrl,
-        submittedAt: new Date().toISOString()
-      };
-      task.completedAt = new Date().toISOString();
-    }
-    
-    if (status === 'DONE' && task.assignedTo) {
-      const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-      const user = users.find(u => u.id === task.assignedTo);
-      if (user) {
-        user.points = (user.points || 0) + (task.points || 0);
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-      }
-    }
-    
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     return task;
   },
 
   async abandonTask(taskId, volunteerId) {
-    await delay(500);
-    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) throw new Error('Задание не найдено');
-
-    const volunteer = users.find(u => u.id === volunteerId);
-    const owner = users.find(u => u.id === task.createdBy);
-
-    if (!volunteer) throw new Error('Волонтер не найден');
-
-    // Рассчитываем штраф (50%)
-    const penalty = Math.floor(task.points * 0.5);
-
-    // Списываем штраф с волонтера
-    volunteer.points = (volunteer.points || 0) - penalty;
-
-    // Возвращаем владельцу стоимость задания + штраф
-    if (owner) {
-      owner.points = (owner.points || 0) + task.points + penalty;
-    }
-
-    // Сбрасываем задание
-    task.status = 'OPEN';
-    task.assignedTo = null;
-    task.report = null;
-
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
-    
-    return { task, penalty };
-  },
-
-  async getUserById(userId) {
     await delay(300);
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    const user = users.find(u => u.id === userId);
+    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+    const task = tasks.find(t => t.id === taskId);
     
-    if (!user) {
-      return null;
+    if (task) {
+        task.status = 'open';
+        task.assignedTo = null;
+        localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     }
-    
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    return { task };
   }
 };
