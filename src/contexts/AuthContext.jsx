@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockUsers } from '../services/mockApi';
+import { mockApi } from '../services/mockApi'; // 1. Исправлен импорт
 
 const AuthContext = createContext(null);
 
@@ -23,27 +23,29 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (loginData, password) => {
-    return new Promise((resolve, reject) => {
-      // Ищем пользователя по email или имени
-      const foundUser = mockUsers.find(u => 
-        (u.email === loginData || u.name === loginData) && u.password === password
-      );
+  // 2. Используем mockApi для входа
+  const login = async (loginData, password) => {
+    try {
+      const user = await mockApi.login(loginData, password);
+      // mockApi возвращает пользователя без пароля
+      setUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  };
 
-      if (foundUser) {
-        // При входе добавляем роль, если её нет
-        const userWithRole = { 
-          ...foundUser, 
-          role: foundUser.role || (foundUser.name === 'Admin' ? 'admin' : 'volunteer') 
-        };
-        
-        setUser(userWithRole);
-        localStorage.setItem('currentUser', JSON.stringify(userWithRole));
-        resolve(userWithRole);
-      } else {
-        reject(new Error('Неверный логин или пароль'));
-      }
-    });
+  // 3. Добавляем функцию регистрации (её не было, но она используется в Register.jsx)
+  const register = async (userData) => {
+    try {
+      const newUser = await mockApi.register(userData);
+      setUser(newUser);
+      localStorage.setItem('currentUser', JSON.stringify(newUser));
+      return newUser;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -51,16 +53,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('currentUser');
   };
 
-  // ВОТ ЭТА ФУНКЦИЯ БЫЛА НУЖНА, ЧТОБЫ НЕ БЫЛО БЕЛОГО ЭКРАНА
+  // 4. Исправляем проверку роли (в mockApi роль 'ADMIN', а не 'admin')
   const isAdmin = () => {
-    return user?.role === 'admin';
+    return user?.role === 'ADMIN';
   };
 
   const value = {
     user,
     login,
+    register,
     logout,
-    isAdmin, // Обязательно передаем её здесь
+    isAdmin,
     loading
   };
 
