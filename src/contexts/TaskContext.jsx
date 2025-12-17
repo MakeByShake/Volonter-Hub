@@ -1,75 +1,88 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { mockApi } from '../services/mockApi';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { mockTasks } from '../services/mockApi';
 
-const TaskContext = createContext(null);
+const TaskContext = createContext();
 
 export const useTasks = () => {
-  const context = useContext(TaskContext);
-  if (!context) {
-    throw new Error('useTasks must be used within TaskProvider');
-  }
-  return context;
+  return useContext(TaskContext);
 };
 
 export const TaskProvider = ({ children }) => {
-  const { user, refreshUser } = useAuth();
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchTasks = useCallback(async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const fetchedTasks = await mockApi.getTasks(user.id, user.role);
-      setTasks(fetchedTasks);
-    } catch (error) {
-      console.error('Ошибка загрузки заданий:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
-
-  const createTask = async (taskData) => {
-    try {
-      const newTask = await mockApi.createTask({
-        ...taskData,
-        createdBy: user.id
-      });
-      await fetchTasks();
-      await refreshUser();
-      return newTask;
-    } catch (error) {
-      throw error;
+    const storedTasks = localStorage.getItem('tasks');
+    if (storedTasks) {
+      setTasks(JSON.parse(storedTasks));
+    } else {
+      setTasks(mockTasks);
     }
+  }, []);
+
+  const updateTasks = (newTasks) => {
+    setTasks(newTasks);
+    localStorage.setItem('tasks', JSON.stringify(newTasks));
   };
 
-  const updateTaskStatus = async (taskId, status, reportData = null) => {
-    try {
-      await mockApi.updateTaskStatus(taskId, status, user.id, reportData);
-      await fetchTasks();
-      if (user.role === 'USER') {
-        await refreshUser();
-      }
-    } catch (error) {
-      throw error;
-    }
+  const createTask = (taskData) => {
+    const newTask = {
+      id: Date.now(),
+      ...taskData,
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      volunteerId: null
+    };
+    updateTasks([newTask, ...tasks]);
+  };
+
+  const takeTask = (taskId, volunteerId) => {
+    const updated = tasks.map(t => 
+      t.id === taskId ? { ...t, status: 'in_progress', volunteerId } : t
+    );
+    updateTasks(updated);
+  };
+
+  const completeTask = (taskId) => {
+    const updated = tasks.map(t => 
+      t.id === taskId ? { ...t, status: 'pending_approval' } : t
+    );
+    updateTasks(updated);
+  };
+
+  const approveTask = (taskId) => {
+    const updated = tasks.map(t => 
+      t.id === taskId ? { ...t, status: 'completed' } : t
+    );
+    updateTasks(updated);
+  };
+
+  const rejectTask = (taskId) => {
+    const updated = tasks.map(t => 
+      t.id === taskId ? { ...t, status: 'open', volunteerId: null } : t
+    );
+    updateTasks(updated);
+  };
+
+  const refuseTask = (taskId) => {
+    const updated = tasks.map(t => 
+      t.id === taskId ? { ...t, status: 'open', volunteerId: null } : t
+    );
+    updateTasks(updated);
   };
 
   const value = {
     tasks,
-    loading,
-    fetchTasks,
     createTask,
-    updateTaskStatus
+    takeTask,
+    completeTask,
+    approveTask,
+    rejectTask,
+    refuseTask
   };
 
-  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+  return (
+    <TaskContext.Provider value={value}>
+      {children}
+    </TaskContext.Provider>
+  );
 };
-
-
