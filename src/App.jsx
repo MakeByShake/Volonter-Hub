@@ -2,25 +2,24 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TaskProvider } from './contexts/TaskContext';
-import Login from './components/LoginForm';
-// Обрати внимание: Register импортируется из pages и как именованный экспорт (в фигурных скобках)
-import { Register } from './pages/Register'; 
+import Login from './components/LoginForm'; // Исправлен путь!
+import { Register } from './pages/Register'; // Исправлен путь!
 import AdminDashboard from './components/dashboards/AdminDashboard';
 import UserDashboard from './components/dashboards/UserDashboard';
 import Navbar from './components/Navbar';
 import { CreateTaskForm } from './components/CreateTaskForm';
 
-// Компонент для защиты роутов
+// Защита маршрутов
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
-  if (loading) return <div>Загрузка...</div>;
+  if (loading) return <div className="p-10 text-center">Загрузка...</div>;
   if (!user) return <Navigate to="/login" />;
   
   return (
     <>
       <Navbar />
-      <div className="pt-20 px-4 max-w-7xl mx-auto">
+      <div className="pt-20 px-4 max-w-7xl mx-auto pb-10">
         {children}
       </div>
     </>
@@ -35,6 +34,7 @@ function AppContent() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
+      {/* Единый дашборд. Если админ - админка, иначе - обычный кабинет */}
       <Route path="/dashboard" element={
         <PrivateRoute>
           {isAdmin() ? <AdminDashboard /> : <UserDashboard />}
