@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockTasks } from '../services/mockApi';
+import { mockApi } from '../services/mockApi'; // Импортируем API
+import { useAuth } from './AuthContext';
 
 const TaskContext = createContext();
 
@@ -9,75 +10,47 @@ export const useTasks = () => {
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
+  const { user } = useAuth();
 
+  // Загрузка задач при старте или смене пользователя
   useEffect(() => {
-    const storedTasks = localStorage.getItem('tasks');
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
-    } else {
-      setTasks(mockTasks);
-    }
-  }, []);
-
-  const updateTasks = (newTasks) => {
-    setTasks(newTasks);
-    localStorage.setItem('tasks', JSON.stringify(newTasks));
-  };
-
-  const createTask = (taskData) => {
-    const newTask = {
-      id: Date.now(),
-      ...taskData,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      volunteerId: null
+    const loadTasks = async () => {
+      try {
+        // mockApi.getTasks возвращает задачи в зависимости от роли
+        const fetchedTasks = await mockApi.getTasks(user?.id, user?.role || 'USER');
+        setTasks(fetchedTasks);
+      } catch (error) {
+        console.error("Ошибка загрузки задач:", error);
+      }
     };
-    updateTasks([newTask, ...tasks]);
+    loadTasks();
+  }, [user]); 
+
+  // Метод создания задачи
+  const createTask = async (taskData) => {
+    const newTask = await mockApi.createTask(taskData);
+    setTasks(prev => [...prev, newTask]);
+    return newTask;
   };
 
-  const takeTask = (taskId, volunteerId) => {
-    const updated = tasks.map(t => 
-      t.id === taskId ? { ...t, status: 'in_progress', volunteerId } : t
-    );
-    updateTasks(updated);
+  // Универсальный метод обновления статуса (используется в TaskCard)
+  const updateTaskStatus = async (taskId, status, reportData = null) => {
+    const updatedTask = await mockApi.updateTaskStatus(taskId, status, user?.id, reportData);
+    setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+    return updatedTask;
   };
 
-  const completeTask = (taskId) => {
-    const updated = tasks.map(t => 
-      t.id === taskId ? { ...t, status: 'pending_approval' } : t
-    );
-    updateTasks(updated);
-  };
-
-  const approveTask = (taskId) => {
-    const updated = tasks.map(t => 
-      t.id === taskId ? { ...t, status: 'completed' } : t
-    );
-    updateTasks(updated);
-  };
-
-  const rejectTask = (taskId) => {
-    const updated = tasks.map(t => 
-      t.id === taskId ? { ...t, status: 'open', volunteerId: null } : t
-    );
-    updateTasks(updated);
-  };
-
-  const refuseTask = (taskId) => {
-    const updated = tasks.map(t => 
-      t.id === taskId ? { ...t, status: 'open', volunteerId: null } : t
-    );
-    updateTasks(updated);
+  // Метод отказа от задачи (используется в TaskCard)
+  const abandonTask = async (taskId) => {
+    const { task: updatedTask } = await mockApi.abandonTask(taskId, user?.id);
+    setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
   };
 
   const value = {
     tasks,
     createTask,
-    takeTask,
-    completeTask,
-    approveTask,
-    rejectTask,
-    refuseTask
+    updateTaskStatus,
+    abandonTask
   };
 
   return (
