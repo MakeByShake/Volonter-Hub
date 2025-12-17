@@ -14,16 +14,33 @@ const statusLabels = {
 
 export const TaskCard = ({ task }) => {
   const { user, isAdmin, isUser } = useAuth();
-  const { updateTaskStatus } = useTasks();
+  const { updateTaskStatus, abandonTask } = useTasks(); // Достаем abandonTask
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleTakeTask = async () => await updateTaskStatus(task.id, 'IN_PROGRESS');
   
-  // Открываем модальное окно вместо прямой отправки
   const onCompleteClick = () => setIsModalOpen(true);
 
-  // Обработка отправки отчета из модалки
+
+  const handleAbandonClick = async () => {
+    const penalty = Math.floor(task.points * 0.5);
+    const isConfirmed = window.confirm(
+      `Вы уверены, что хотите отказаться? \n\nС вас будет списан штраф: ${penalty} баллов.\nЭти баллы перейдут владельцу задания.`
+    );
+
+    if (isConfirmed) {
+      setLoading(true);
+      try {
+        await abandonTask(task.id);
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleSubmitReport = async (reportData) => {
     setLoading(true);
     try {
@@ -38,7 +55,18 @@ export const TaskCard = ({ task }) => {
   };
 
   const handleApprove = async () => await updateTaskStatus(task.id, 'OPEN');
+  
+
   const handleReject = async () => await updateTaskStatus(task.id, 'REJECTED');
+  
+
+  const handleRejectReport = async () => {
+    if (window.confirm('Отклонить отчет и вернуть задание волонтеру на доработку?')) {
+
+      await updateTaskStatus(task.id, 'IN_PROGRESS'); 
+    }
+  };
+
   const handleConfirmCompletion = async () => await updateTaskStatus(task.id, 'DONE');
 
   const statusInfo = statusLabels[task.status] || statusLabels.PENDING;
@@ -46,7 +74,6 @@ export const TaskCard = ({ task }) => {
   return (
     <>
       <div className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 border border-transparent hover:border-primary-100 overflow-hidden flex flex-col h-full">
-        {/* Изображение с оверлеем */}
         <div className="relative h-48 overflow-hidden bg-gray-100">
           <img 
             src={task.imageUrl} 
@@ -72,7 +99,6 @@ export const TaskCard = ({ task }) => {
               {task.description}
             </p>
 
-            {/* Блок отчета (виден только админу или автору, если есть отчет) */}
             {task.report && (isAdmin() || task.createdBy === user?.id || task.assignedTo === user?.id) && (
               <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100 text-sm">
                 <p className="font-semibold text-gray-700 mb-1">Отчет исполнителя:</p>
@@ -113,9 +139,15 @@ export const TaskCard = ({ task }) => {
                   </>
                 )}
                 {task.status === 'REVIEW' && (
-                  <button onClick={handleConfirmCompletion} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
-                    Подтвердить и начислить баллы
-                  </button>
+                  <>
+                    <button onClick={handleConfirmCompletion} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
+                      Подтвердить
+                    </button>
+                    {/* КНОПКА ОТКЛОНЕНИЯ ОТЧЕТА ДЛЯ АДМИНА */}
+                    <button onClick={handleRejectReport} className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors">
+                      Отклонить отчет
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -127,9 +159,19 @@ export const TaskCard = ({ task }) => {
             )}
 
             {isUser() && task.assignedTo === user.id && task.status === 'IN_PROGRESS' && (
-              <button onClick={onCompleteClick} className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-lg text-sm font-medium shadow-violet/20 shadow-lg transition-all active:scale-[0.98]">
-                Завершить и отправить отчет
-              </button>
+              <div className="flex flex-col gap-2">
+                <button onClick={onCompleteClick} className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-lg text-sm font-medium shadow-violet/20 shadow-lg transition-all active:scale-[0.98]">
+                  Завершить и отправить отчет
+                </button>
+                {/* КНОПКА ОТКАЗА ДЛЯ ВОЛОНТЕРА */}
+                <button 
+                  onClick={handleAbandonClick} 
+                  disabled={loading}
+                  className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Отказаться (Штраф -50%)
+                </button>
+              </div>
             )}
             
             {isUser() && task.createdBy === user.id && (
