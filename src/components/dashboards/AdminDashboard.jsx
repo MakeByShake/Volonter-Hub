@@ -1,9 +1,11 @@
 import React from 'react';
 
-function AdminDashboard({ tasks, users, onApprove, onReject }) {
+// Добавлены значения по умолчанию для tasks и users
+function AdminDashboard({ tasks = [], users = [], onApprove, onReject }) {
   const pendingTasks = tasks.filter(t => t.status === 'pending_approval');
   
   const getVolunteerName = (id) => {
+    if (!id) return '-';
     const user = users.find(u => u.id === id);
     return user ? user.name : 'Unknown';
   };
@@ -29,13 +31,15 @@ function AdminDashboard({ tasks, users, onApprove, onReject }) {
                         <h5 className="mb-1">{task.title}</h5>
                         <p className="mb-1">{task.description}</p>
                         <small className="text-muted">
-                          Выполнил: <strong>{getVolunteerName(task.volunteerId)}</strong>
+                          {/* Исправлено volunteerId -> assignedTo */}
+                          Выполнил: <strong>{getVolunteerName(task.assignedTo)}</strong>
                         </small>
                       </div>
                       <div className="d-flex gap-2">
                         <button 
                           className="btn btn-success"
-                          onClick={() => onApprove(task.id, task.volunteerId)}
+                          // Исправлено volunteerId -> assignedTo
+                          onClick={() => onApprove(task.id, task.assignedTo)}
                         >
                           Подтвердить
                         </button>
@@ -81,7 +85,8 @@ function AdminDashboard({ tasks, users, onApprove, onReject }) {
                       {task.status}
                     </span>
                   </td>
-                  <td>{task.volunteerId ? getVolunteerName(task.volunteerId) : '-'}</td>
+                  {/* Исправлено volunteerId -> assignedTo */}
+                  <td>{getVolunteerName(task.assignedTo)}</td>
                 </tr>
               ))}
             </tbody>
