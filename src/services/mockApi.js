@@ -257,3 +257,85 @@ export const mockApi = {
   }
 };
 
+
+  async updateTaskStatus(taskId, status, userId = null, reportData = null) {
+    await delay(500);
+    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (!task) {
+      throw new Error('Задание не найдено');
+    }
+    
+    task.status = status;
+    
+    if (status === 'IN_PROGRESS' && userId) {
+      task.assignedTo = userId;
+    }
+
+
+    if (status === 'IN_PROGRESS' && !userId) {
+
+       task.report = null; // Сбрасываем плохой отчет
+    }
+    
+
+    if (status === 'REVIEW' && reportData) {
+      task.report = {
+        description: reportData.description,
+        imageUrl: reportData.imageUrl,
+        submittedAt: new Date().toISOString()
+      };
+      task.completedAt = new Date().toISOString();
+    }
+    
+    if (status === 'DONE' && task.assignedTo) {
+      const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+      const user = users.find(u => u.id === task.assignedTo);
+      if (user) {
+        user.points = (user.points || 0) + (task.points || 0);
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      }
+    }
+    
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    return task;
+  },
+
+  // НОВАЯ ФУНКЦИЯ: Отказ от задания со штрафом
+  async abandonTask(taskId, volunteerId) {
+    await delay(500);
+    const tasks = JSON.parse(localStorage.getItem(STORAGE_KEYS.TASKS) || '[]');
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) throw new Error('Задание не найдено');
+
+    const volunteer = users.find(u => u.id === volunteerId);
+    const owner = users.find(u => u.id === task.createdBy);
+
+    if (!volunteer) throw new Error('Волонтер не найден');
+
+
+    const penalty = Math.floor(task.points * 0.5);
+
+    volunteer.points = (volunteer.points || 0) - penalty;
+
+
+    if (owner) {
+      owner.points = (owner.points || 0) + task.points + penalty;
+    }
+
+
+    task.status = 'OPEN';
+    task.assignedTo = null;
+    task.report = null;
+
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    
+    return { task, penalty };
+  },
+
+  async getUserById(userId) {
+
