@@ -7,6 +7,8 @@ export const CreateTaskForm = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
+  const [phone, setPhone] = useState(''); // Новое поле
+  const [contactInfo, setContactInfo] = useState(''); // Новое поле
   const [imageUrl, setImageUrl] = useState('');
   const [points, setPoints] = useState(50);
   const [error, setError] = useState('');
@@ -25,6 +27,8 @@ export const CreateTaskForm = () => {
         title,
         description,
         city,
+        phone, // Отправляем телефон
+        contactInfo, // Отправляем контакты
         imageUrl: imageUrl || 'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=400',
         points: parseInt(points)
       });
@@ -49,7 +53,7 @@ export const CreateTaskForm = () => {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             required
             placeholder="Например: Помощь в уборке квартиры"
           />
@@ -63,23 +67,51 @@ export const CreateTaskForm = () => {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             required
             placeholder="Опишите, какая помощь вам нужна..."
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Город *
+            </label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+              placeholder="Москва"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Номер телефона *
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+              placeholder="+7 (999) 000-00-00"
+            />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Город *
+            Дополнительные контакты (Telegram, WhatsApp)
           </label>
           <input
             type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-            placeholder="Москва"
+            value={contactInfo}
+            onChange={(e) => setContactInfo(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            placeholder="@username"
           />
         </div>
 
@@ -91,10 +123,9 @@ export const CreateTaskForm = () => {
             type="url"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="https://example.com/image.jpg"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            placeholder="https://..."
           />
-          <p className="text-xs text-gray-500 mt-1">Если не указано, будет использовано изображение по умолчанию</p>
         </div>
 
         <div>
@@ -105,11 +136,6 @@ export const CreateTaskForm = () => {
             <p className="text-sm text-gray-600">
               Ваш баланс: <span className="font-bold text-blue-600">{user?.points || 0} очков</span>
             </p>
-            {parseInt(points) > (user?.points || 0) && (
-              <p className="text-xs text-red-600 mt-1">
-                Недостаточно очков! У вас {user?.points || 0}, требуется {points}
-              </p>
-            )}
           </div>
           <input
             type="number"
@@ -117,12 +143,9 @@ export const CreateTaskForm = () => {
             onChange={(e) => setPoints(e.target.value)}
             min="1"
             max={user?.points || 1000}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             required
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Укажите количество бонусов, которые вы отдадите за выполнение задания. Бонусы будут списаны с вашего баланса при создании заявки.
-          </p>
         </div>
 
         {error && (
@@ -131,18 +154,18 @@ export const CreateTaskForm = () => {
           </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 pt-4">
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50"
+            className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg hover:bg-primary-700 transition font-medium disabled:opacity-50 shadow-lg shadow-primary-500/30"
           >
-            {loading ? 'Создание...' : 'Создать заявку'}
+            {loading ? 'Создание...' : 'Опубликовать задание'}
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
-            className="px-6 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition"
+            className="px-6 bg-gray-100 text-gray-700 py-2.5 rounded-lg hover:bg-gray-200 transition"
           >
             Отмена
           </button>
