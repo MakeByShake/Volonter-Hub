@@ -27,7 +27,7 @@ export const TaskProvider = ({ children }) => {
   const createTask = async (taskData) => {
     const taskWithUser = { ...taskData, createdBy: user?.id };
     // ИСПРАВЛЕНО: const вместо constGK
-    const newTask = await mockApi.createTask(taskWithUser);
+    const newTask = await mockApi.createTask(taskWithUser); 
     setTasks(prev => [...prev, newTask]);
     return newTask;
   };
