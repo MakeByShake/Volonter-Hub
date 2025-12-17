@@ -26,10 +26,10 @@ export const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-10 w-full max-w-md relative overflow-hidden">
-        {/* Декоративный элемент сверху */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-500 to-violet-500"></div>
+        {/* Зеленый декоративный градиент */}
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-400 to-primary-600"></div>
 
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
