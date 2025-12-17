@@ -1,93 +1,62 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
-export const LoginForm = () => {
-  const [login, setLogin] = useState('');
+function LoginForm({ onLogin, users }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login: loginUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      await loginUser(login, password);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.message || 'Ошибка входа');
-    } finally {
-      setLoading(false);
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+      onLogin(user);
+      navigate(`/${user.role}`);
+    } else {
+      setError('Неверный email или пароль');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-10 w-full max-w-md relative overflow-hidden">
-        {/* Зеленый декоративный градиент */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-400 to-primary-600"></div>
-
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
-            Volunteer Hub
-          </h1>
-          <p className="text-gray-500">Войдите, чтобы начать помогать</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700 ml-1">Логин</label>
-            <input
-              type="text"
-              value={login}
-              onChange={(e) => setLogin(e.target.value)}
-              className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all outline-none text-gray-800 placeholder-gray-400"
-              placeholder="Введите ваш логин"
-              required
-            />
+    <div className="row justify-content-center">
+      <div className="col-md-6">
+        <div className="card shadow-sm">
+          <div className="card-body">
+            <h2 className="text-center mb-4">Вход</h2>
+            {error && <div className="alert alert-danger">{error}</div>}
+            <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <label>Email</label>
+                <input 
+                  type="email" 
+                  className="form-control" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required 
+                />
+              </div>
+              <div className="mb-3">
+                <label>Пароль</label>
+                <input 
+                  type="password" 
+                  className="form-control" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
+                />
+              </div>
+              <button type="submit" className="btn btn-primary w-100">Войти</button>
+            </form>
+            <p className="mt-3 text-center">
+              Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+            </p>
           </div>
-
-          <div className="space-y-2">
-             <label className="text-sm font-semibold text-gray-700 ml-1">Пароль</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all outline-none text-gray-800 placeholder-gray-400"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-2">
-              <span className="block w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-600 text-white py-3.5 rounded-xl hover:bg-primary-700 transition-all duration-200 font-semibold shadow-lg shadow-primary-500/30 disabled:opacity-70 disabled:shadow-none hover:-translate-y-0.5"
-          >
-            {loading ? 'Вход...' : 'Войти в аккаунт'}
-          </button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-gray-100">
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Нет аккаунта?{' '}
-            <a href="#/register" className="text-primary-600 hover:text-primary-700 font-semibold hover:underline">
-              Создать аккаунт
-            </a>
-          </p>
         </div>
       </div>
     </div>
   );
-};
+}
+
+export default LoginForm;
