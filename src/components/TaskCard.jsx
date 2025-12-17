@@ -1,194 +1,84 @@
-import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useTasks } from '../contexts/TaskContext';
-import { CompleteTaskModal } from './CompleteTaskModal';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { mockApi } from '../services/mockApi';
+import { useAuth } from './AuthContext';
 
-const statusLabels = {
-  PENDING: { label: 'На проверке', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  OPEN: { label: 'Поиск волонтера', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  IN_PROGRESS: { label: 'В работе', color: 'bg-violet-50 text-violet-700 border-violet-200' },
-  REVIEW: { label: 'Проверка отчета', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  DONE: { label: 'Выполнено', color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  REJECTED: { label: 'Отклонено', color: 'bg-red-50 text-red-700 border-red-200' }
+const TaskContext = createContext(null);
+
+export const useTasks = () => {
+  const context = useContext(TaskContext);
+  if (!context) {
+    throw new Error('useTasks must be used within TaskProvider');
+  }
+  return context;
 };
 
-export const TaskCard = ({ task }) => {
-  const { user, isAdmin, isUser } = useAuth();
-  const { updateTaskStatus, abandonTask } = useTasks(); // Достаем abandonTask
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export const TaskProvider = ({ children }) => {
+  const { user, refreshUser } = useAuth();
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const handleTakeTask = async () => await updateTaskStatus(task.id, 'IN_PROGRESS');
-  
-  const onCompleteClick = () => setIsModalOpen(true);
-
-
-  const handleAbandonClick = async () => {
-    const penalty = Math.floor(task.points * 0.5);
-    const isConfirmed = window.confirm(
-      `Вы уверены, что хотите отказаться? \n\nС вас будет списан штраф: ${penalty} баллов.\nЭти баллы перейдут владельцу задания.`
-    );
-
-    if (isConfirmed) {
-      setLoading(true);
-      try {
-        await abandonTask(task.id);
-      } catch (error) {
-        alert(error.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleSubmitReport = async (reportData) => {
+  const fetchTasks = useCallback(async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      await updateTaskStatus(task.id, 'REVIEW', reportData);
-      setIsModalOpen(false);
+      const fetchedTasks = await mockApi.getTasks(user.id, user.role);
+      setTasks(fetchedTasks);
     } catch (error) {
-      console.error(error);
-      alert('Ошибка при отправке отчета');
+      console.error('Ошибка загрузки заданий:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const handleApprove = async () => await updateTaskStatus(task.id, 'OPEN');
-  
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
-  const handleReject = async () => await updateTaskStatus(task.id, 'REJECTED');
-  
-
-  const handleRejectReport = async () => {
-    if (window.confirm('Отклонить отчет и вернуть задание волонтеру на доработку?')) {
-
-      await updateTaskStatus(task.id, 'IN_PROGRESS'); 
+  const createTask = async (taskData) => {
+    try {
+      const newTask = await mockApi.createTask({
+        ...taskData,
+        createdBy: user.id
+      });
+      await fetchTasks();
+      await refreshUser();
+      return newTask;
+    } catch (error) {
+      throw error;
     }
   };
 
-  const handleConfirmCompletion = async () => await updateTaskStatus(task.id, 'DONE');
+  const updateTaskStatus = async (taskId, status, reportData = null) => {
+    try {
+      await mockApi.updateTaskStatus(taskId, status, user.id, reportData);
+      await fetchTasks();
+      if (user.role === 'USER') {
+        await refreshUser();
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
 
-  const statusInfo = statusLabels[task.status] || statusLabels.PENDING;
+  const abandonTask = async (taskId) => {
+    try {
+      await mockApi.abandonTask(taskId, user.id);
+      await fetchTasks();
+      await refreshUser();
+    } catch (error) {
+      throw error;
+    }
+  };
 
-  return (
-    <>
-      <div className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 border border-transparent hover:border-primary-100 overflow-hidden flex flex-col h-full">
-        <div className="relative h-48 overflow-hidden bg-gray-100">
-          <img 
-            src={task.imageUrl} 
-            alt={task.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/400x200?text=No+Image';
-            }}
-          />
-          <div className="absolute top-3 right-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusInfo.color} shadow-sm backdrop-blur-sm`}>
-              {statusInfo.label}
-            </span>
-          </div>
-        </div>
-        
-        <div className="p-5 flex flex-col flex-1">
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-900 mb-2 leading-tight group-hover:text-primary-600 transition-colors">
-              {task.title}
-            </h3>
-            <p className="text-gray-500 text-sm mb-4 line-clamp-3 leading-relaxed">
-              {task.description}
-            </p>
+  const value = {
+    tasks,
+    loading,
+    fetchTasks,
+    createTask,
+    updateTaskStatus,
+    abandonTask
+  };
 
-            {task.report && (isAdmin() || task.createdBy === user?.id || task.assignedTo === user?.id) && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100 text-sm">
-                <p className="font-semibold text-gray-700 mb-1">Отчет исполнителя:</p>
-                <p className="text-gray-600 mb-2 italic">"{task.report.description}"</p>
-                {task.report.imageUrl && (
-                  <a 
-                    href={task.report.imageUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 text-xs font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    Смотреть фото-доказательство
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-50 mt-4">
-            <span className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              {task.city}
-            </span>
-            <span className="flex items-center gap-1.5 font-semibold text-primary-600 bg-primary-50 px-2.5 py-1 rounded-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              {task.points} баллов
-            </span>
-          </div>
-
-          <div className="mt-5 pt-0">
-            {isAdmin() && (
-              <div className="flex gap-2">
-                {task.status === 'PENDING' && (
-                  <>
-                    <button onClick={handleApprove} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">Одобрить</button>
-                    <button onClick={handleReject} className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors">Отклонить</button>
-                  </>
-                )}
-                {task.status === 'REVIEW' && (
-                  <>
-                    <button onClick={handleConfirmCompletion} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
-                      Подтвердить
-                    </button>
-                    {/* КНОПКА ОТКЛОНЕНИЯ ОТЧЕТА ДЛЯ АДМИНА */}
-                    <button onClick={handleRejectReport} className="flex-1 bg-white border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors">
-                      Отклонить отчет
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {isUser() && task.status === 'OPEN' && task.createdBy !== user.id && (
-              <button onClick={handleTakeTask} className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-lg text-sm font-medium shadow-primary/20 shadow-lg transition-all active:scale-[0.98]">
-                Взять задание
-              </button>
-            )}
-
-            {isUser() && task.assignedTo === user.id && task.status === 'IN_PROGRESS' && (
-              <div className="flex flex-col gap-2">
-                <button onClick={onCompleteClick} className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-lg text-sm font-medium shadow-violet/20 shadow-lg transition-all active:scale-[0.98]">
-                  Завершить и отправить отчет
-                </button>
-                {/* КНОПКА ОТКАЗА ДЛЯ ВОЛОНТЕРА */}
-                <button 
-                  onClick={handleAbandonClick} 
-                  disabled={loading}
-                  className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Отказаться (Штраф -50%)
-                </button>
-              </div>
-            )}
-            
-            {isUser() && task.createdBy === user.id && (
-              <div className="text-xs text-center text-gray-400 mt-2 font-medium">
-                Опубликовано {new Date(task.createdAt).toLocaleDateString('ru-RU')}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <CompleteTaskModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmitReport}
-        loading={loading}
-      />
-    </>
-  );
+  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 };
