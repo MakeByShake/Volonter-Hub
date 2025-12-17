@@ -1,14 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockApi } from '../services/mockApi';
+import { mockUsers } from '../services/mockApi';
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };
 
 export const AuthProvider = ({ children }) => {
@@ -16,63 +12,61 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('volunteer_platform_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Ошибка чтения пользователя", e);
+      }
     }
     setLoading(false);
   }, []);
 
-  const login = async (login, password) => {
-    try {
-      const userData = await mockApi.login(login, password);
-      setUser(userData);
-      localStorage.setItem('volunteer_platform_user', JSON.stringify(userData));
-      return userData;
-    } catch (error) {
-      throw error;
-    }
-  };
+  const login = (loginData, password) => {
+    return new Promise((resolve, reject) => {
+      // Ищем пользователя по email или имени
+      const foundUser = mockUsers.find(u => 
+        (u.email === loginData || u.name === loginData) && u.password === password
+      );
 
-  const register = async (userData) => {
-    try {
-      const newUser = await mockApi.register(userData);
-      setUser(newUser);
-      localStorage.setItem('volunteer_platform_user', JSON.stringify(newUser));
-      return newUser;
-    } catch (error) {
-      throw error;
-    }
+      if (foundUser) {
+        // При входе добавляем роль, если её нет
+        const userWithRole = { 
+          ...foundUser, 
+          role: foundUser.role || (foundUser.name === 'Admin' ? 'admin' : 'volunteer') 
+        };
+        
+        setUser(userWithRole);
+        localStorage.setItem('currentUser', JSON.stringify(userWithRole));
+        resolve(userWithRole);
+      } else {
+        reject(new Error('Неверный логин или пароль'));
+      }
+    });
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('volunteer_platform_user');
+    localStorage.removeItem('currentUser');
   };
 
-  const refreshUser = async () => {
-    if (user) {
-      const updatedUser = await mockApi.getUserById(user.id);
-      if (updatedUser) {
-        setUser(updatedUser);
-        localStorage.setItem('volunteer_platform_user', JSON.stringify(updatedUser));
-      }
-    }
+  // ВОТ ЭТА ФУНКЦИЯ БЫЛА НУЖНА, ЧТОБЫ НЕ БЫЛО БЕЛОГО ЭКРАНА
+  const isAdmin = () => {
+    return user?.role === 'admin';
   };
-
-  const isAdmin = () => user?.role === 'ADMIN';
-  const isUser = () => user?.role === 'USER';
 
   const value = {
     user,
-    loading,
     login,
-    register,
     logout,
-    refreshUser,
-    isAdmin,
-    isUser
+    isAdmin, // Обязательно передаем её здесь
+    loading
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
